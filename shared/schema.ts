@@ -1,5 +1,3 @@
-import { pgTable, text, serial, integer, boolean, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Character abilities
@@ -42,96 +40,82 @@ export const spellSlotsSchema = z.record(z.object({
   used: z.number(),
 }));
 
-// Characters table
-export const characters = pgTable("characters", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  race: text("race").notNull(),
-  class: text("class").notNull(),
-  level: integer("level").notNull().default(1),
-  background: text("background").notNull(),
-  abilities: jsonb("abilities").$type<z.infer<typeof abilityScoresSchema>>().notNull(),
-  skills: jsonb("skills").$type<z.infer<typeof skillsSchema>>().notNull(),
-  combat: jsonb("combat").$type<z.infer<typeof combatStatsSchema>>().notNull(),
-  currency: jsonb("currency").$type<z.infer<typeof currencySchema>>().notNull(),
-  spellSlots: jsonb("spell_slots").$type<z.infer<typeof spellSlotsSchema>>(),
-  notes: text("notes"),
+// Character schema
+export const characterSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  race: z.string(),
+  class: z.string(),
+  level: z.number().default(1),
+  background: z.string(),
+  abilities: abilityScoresSchema,
+  skills: skillsSchema,
+  combat: combatStatsSchema,
+  currency: currencySchema,
+  spellSlots: spellSlotsSchema.optional(),
+  notes: z.string().optional(),
 });
 
-// Attacks/Weapons
-export const attacks = pgTable("attacks", {
-  id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull(),
-  name: text("name").notNull(),
-  attackBonus: integer("attack_bonus").notNull(),
-  damage: text("damage").notNull(),
-  damageType: text("damage_type").notNull(),
-  range: text("range").notNull(),
-  notes: text("notes"),
+// Attack schema
+export const attackSchema = z.object({
+  id: z.number(),
+  characterId: z.number(),
+  name: z.string(),
+  attackBonus: z.number(),
+  damage: z.string(),
+  damageType: z.string(),
+  range: z.string(),
+  notes: z.string().optional(),
 });
 
-// Items/Equipment
-export const items = pgTable("items", {
-  id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull(),
-  name: text("name").notNull(),
-  type: text("type").notNull(),
-  description: text("description"),
-  quantity: integer("quantity").notNull().default(1),
-  weight: integer("weight").notNull().default(0), // in pounds * 10 for precision
-  value: integer("value").notNull().default(0), // in copper pieces
-  equipped: boolean("equipped").default(false),
+// Item schema
+export const itemSchema = z.object({
+  id: z.number(),
+  characterId: z.number(),
+  name: z.string(),
+  type: z.string(),
+  description: z.string().optional(),
+  quantity: z.number().default(1),
+  weight: z.number().default(0), // in pounds * 10 for precision
+  value: z.number().default(0), // in copper pieces
+  equipped: z.boolean().default(false),
 });
 
-// Known Spells
-export const knownSpells = pgTable("known_spells", {
-  id: serial("id").primaryKey(),
-  characterId: integer("character_id").notNull(),
-  spellId: text("spell_id").notNull(),
-  level: integer("level").notNull(),
-  prepared: boolean("prepared").default(false),
+// Known spell schema
+export const knownSpellSchema = z.object({
+  id: z.number(),
+  characterId: z.number(),
+  spellId: z.string(),
+  level: z.number(),
+  prepared: z.boolean().default(false),
 });
 
-// Dice Roll History
-export const rollHistory = pgTable("roll_history", {
-  id: serial("id").primaryKey(),
-  formula: text("formula").notNull(),
-  result: integer("result").notNull(),
-  breakdown: text("breakdown").notNull(),
-  timestamp: text("timestamp").notNull(),
+// Roll history schema
+export const rollHistorySchema = z.object({
+  id: z.number(),
+  formula: z.string(),
+  result: z.number(),
+  breakdown: z.string(),
+  timestamp: z.string(),
 });
 
-// Insert schemas
-export const insertCharacterSchema = createInsertSchema(characters).omit({
-  id: true,
-});
-
-export const insertAttackSchema = createInsertSchema(attacks).omit({
-  id: true,
-});
-
-export const insertItemSchema = createInsertSchema(items).omit({
-  id: true,
-});
-
-export const insertKnownSpellSchema = createInsertSchema(knownSpells).omit({
-  id: true,
-});
-
-export const insertRollHistorySchema = createInsertSchema(rollHistory).omit({
-  id: true,
-});
+// Insert schemas (without id)
+export const insertCharacterSchema = characterSchema.omit({ id: true });
+export const insertAttackSchema = attackSchema.omit({ id: true });
+export const insertItemSchema = itemSchema.omit({ id: true });
+export const insertKnownSpellSchema = knownSpellSchema.omit({ id: true });
+export const insertRollHistorySchema = rollHistorySchema.omit({ id: true });
 
 // Types
-export type Character = typeof characters.$inferSelect;
+export type Character = z.infer<typeof characterSchema>;
 export type InsertCharacter = z.infer<typeof insertCharacterSchema>;
-export type Attack = typeof attacks.$inferSelect;
+export type Attack = z.infer<typeof attackSchema>;
 export type InsertAttack = z.infer<typeof insertAttackSchema>;
-export type Item = typeof items.$inferSelect;
+export type Item = z.infer<typeof itemSchema>;
 export type InsertItem = z.infer<typeof insertItemSchema>;
-export type KnownSpell = typeof knownSpells.$inferSelect;
+export type KnownSpell = z.infer<typeof knownSpellSchema>;
 export type InsertKnownSpell = z.infer<typeof insertKnownSpellSchema>;
-export type RollHistory = typeof rollHistory.$inferSelect;
+export type RollHistory = z.infer<typeof rollHistorySchema>;
 export type InsertRollHistory = z.infer<typeof insertRollHistorySchema>;
 export type AbilityScores = z.infer<typeof abilityScoresSchema>;
 export type Skills = z.infer<typeof skillsSchema>;

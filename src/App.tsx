@@ -6,8 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
 function Routes() {
   return (
     <Switch>
@@ -22,7 +20,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <WouterRouter base={basePath}>
+        <WouterRouter>
           <Routes />
         </WouterRouter>
       </TooltipProvider>
