@@ -12,16 +12,14 @@ const tables: TableName[] = [
   "rolls",
 ];
 
-const storageKey = (table: TableName) => `dnd-lite:${table}`;
-
-function load<T = Entity>(table: TableName): T[] {
-  const raw = localStorage.getItem(storageKey(table));
-  return raw ? (JSON.parse(raw) as T[]) : [];
-}
-
-function save<T = Entity>(table: TableName, rows: T[]) {
-  localStorage.setItem(storageKey(table), JSON.stringify(rows));
-}
+// In-memory store (cleared on page refresh)
+const db: Record<TableName, Entity[]> = {
+  characters: [],
+  attacks: [],
+  items: [],
+  spells: [],
+  rolls: [],
+};
 
 function nextId(rows: Entity[]): number {
   return rows.length ? Math.max(...rows.map((r) => (r.id as number))) + 1 : 1;
@@ -37,7 +35,7 @@ async function router(url: URL, init: RequestInit = {}): Promise<Response> {
     return new Response("Not found", { status: 404 });
   }
 
-  let rows = load<Entity>(table);
+  let rows = db[table];
   const method = (init.method || "GET").toUpperCase();
 
   if (method === "GET") {
@@ -52,7 +50,7 @@ async function router(url: URL, init: RequestInit = {}): Promise<Response> {
     const body = (init.body ? JSON.parse(init.body as string) : {}) as Entity;
     const created = { id: nextId(rows), ...body };
     rows.push(created);
-    save(table, rows);
+    db[table] = rows;
     return new Response(JSON.stringify(created), { status: 201 });
   }
 
@@ -62,14 +60,14 @@ async function router(url: URL, init: RequestInit = {}): Promise<Response> {
     const idx = rows.findIndex((r) => r.id === Number(id));
     if (idx === -1) return new Response("Not found", { status: 404 });
     rows[idx] = { ...rows[idx], ...body };
-    save(table, rows);
+    db[table] = rows;
     return Response.json(rows[idx]);
   }
 
   if (method === "DELETE") {
     if (!id) return new Response("Missing id", { status: 400 });
     rows = rows.filter((r) => r.id !== Number(id));
-    save(table, rows);
+    db[table] = rows;
     return new Response(null, { status: 204 });
   }
 
@@ -93,7 +91,7 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 // -----------------------------------------------
 export function exportAllData(): string {
   const dump: Record<TableName, unknown[]> = Object.fromEntries(
-    tables.map((t) => [t, load(t)])
+    tables.map((t) => [t, db[t]])
   ) as Record<TableName, unknown[]>;
   return LZString.compressToEncodedURIComponent(JSON.stringify(dump));
 }
@@ -104,5 +102,7 @@ export function importAllData(compressed: string) {
     throw new Error("Invalid data string");
   }
   const parsed = JSON.parse(json) as Record<TableName, unknown[]>;
-  tables.forEach((t) => save(t, (parsed[t] as unknown[]) ?? []));
+  tables.forEach((t) => {
+    db[t] = (parsed[t] as Entity[]) ?? [];
+  });
 } 
