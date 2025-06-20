@@ -24,10 +24,12 @@ jobs:
         run: npm ci
 
       - name: Clean previous build
-        run: rm -rf dist
+        run: |
+          if [ -d "dist" ]; then rm -rf dist; fi
 
       - name: Build
-        run: NODE_ENV=production npm run build
+        run: |
+          NODE_ENV=production npm run build
 
       - name: Disable Jekyll
         run: echo '' > dist/.nojekyll
